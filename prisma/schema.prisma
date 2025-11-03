@@ -1,0 +1,124 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String?
+  password  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  resumes         Resume[]
+  interviews      Interview[]
+  videoSessions   VideoSession[]
+  
+  @@map("users")
+}
+
+model Resume {
+  id          String   @id @default(cuid())
+  userId      String
+  filename    String
+  originalName String
+  content     String   @db.Text
+  atsScore    Float?
+  feedback    String?  @db.Text
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@map("resumes")
+}
+
+model Interview {
+  id          String   @id @default(cuid())
+  userId      String
+  type        String   // "text" or "video"
+  status      String   @default("active") // "active", "completed", "paused"
+  currentQuestion Int   @default(0)
+  totalQuestions  Int   @default(0)
+  score       Float?
+  feedback    String?  @db.Text
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  questions   InterviewQuestion[]
+  answers     InterviewAnswer[]
+  
+  @@map("interviews")
+}
+
+model InterviewQuestion {
+  id          String   @id @default(cuid())
+  interviewId String
+  questionText String  @db.Text
+  category    String   // "technical", "behavioral", "situational"
+  order       Int
+  createdAt   DateTime @default(now())
+
+  // Relations
+  interview   Interview @relation(fields: [interviewId], references: [id], onDelete: Cascade)
+  answer      InterviewAnswer?
+  
+  @@map("interview_questions")
+}
+
+model InterviewAnswer {
+  id          String   @id @default(cuid())
+  questionId  String   @unique
+  interviewId String
+  answerText  String   @db.Text
+  score       Float?
+  feedback    String?  @db.Text
+  createdAt   DateTime @default(now())
+
+  // Relations
+  question    InterviewQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  interview   Interview @relation(fields: [interviewId], references: [id], onDelete: Cascade)
+  
+  @@map("interview_answers")
+}
+
+model VideoSession {
+  id          String   @id @default(cuid())
+  userId      String
+  sessionData String?  @db.Text // JSON data for video analysis
+  visualScore Float?
+  vocalScore  Float?
+  contentScore Float?
+  finalScore  Float?
+  report      String?  @db.Text
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@map("video_sessions")
+}
+
+model QuestionBank {
+  id          String   @id @default(cuid())
+  question    String   @db.Text
+  category    String   // "technical", "behavioral", "situational"
+  difficulty  String   // "easy", "medium", "hard"
+  tags        String[] // Array of tags for filtering
+  createdAt   DateTime @default(now())
+  
+  @@map("question_bank")
+}
