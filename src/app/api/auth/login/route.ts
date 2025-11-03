@@ -13,9 +13,12 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Normalize email to lowercase
+    const emailNormalized = email.toLowerCase()
+
     // Find user by email
     const user = await prisma.user.findUnique({
-      where: { email }
+      where: { email: emailNormalized }
     })
 
     if (!user) {
@@ -37,9 +40,8 @@ export async function POST(request: NextRequest) {
     // Generate JWT token
     const token = generateToken(user.id)
 
-    // Return user data (without password) and token
     const { password: _, ...userWithoutPassword } = user
-    
+
     return NextResponse.json({
       user: userWithoutPassword,
       token

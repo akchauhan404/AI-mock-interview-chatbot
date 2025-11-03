@@ -16,6 +16,7 @@ export default function LoginPage() {
   const { login, user } = useAuth()
   const router = useRouter()
 
+  // Redirect if already logged in
   useEffect(() => {
     if (user) {
       router.push('/dashboard')
@@ -23,37 +24,25 @@ export default function LoginPage() {
     setIsVisible(true)
   }, [user, router])
 
+  // ✅ Corrected handleSubmit function
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
     setLoading(true)
 
     try {
-      const response = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ email, password }),
-      })
-
-      const data = await response.json()
-
-      if (response.ok) {
-        login(data.token, data.user)
-        router.push('/dashboard')
-      } else {
-        setError(data.error || 'Login failed')
-      }
-    } catch (err) {
-      setError('An error occurred. Please try again.')
+      // Directly call AuthContext's login function (handles API + token)
+      await login(email, password)
+      router.push('/dashboard')
+    } catch (err: any) {
+      setError(err.message || 'Login failed')
     } finally {
       setLoading(false)
     }
   }
 
   if (user) {
-    return null // Will redirect to dashboard
+    return null // Will redirect to dashboard if logged in
   }
 
   return (
@@ -171,8 +160,8 @@ export default function LoginPage() {
             <div className="text-center">
               <p className="text-gray-600">
                 Don&apos;t have an account?{' '}
-                <Link 
-                  href="/signup" 
+                <Link
+                  href="/signup"
                   className="font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent hover:from-purple-600 hover:to-pink-600 transition-all duration-300"
                 >
                   Sign up here

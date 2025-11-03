@@ -63,6 +63,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   const login = async (email: string, password: string) => {
+    if (!email || email.startsWith('eyJ')) {
+      throw new Error('Invalid login input')
+    }
     const response = await fetch('/api/auth/login', {
       method: 'POST',
       headers: {
