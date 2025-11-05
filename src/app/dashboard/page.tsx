@@ -244,7 +244,7 @@ export default function DashboardPage() {
               </div>
             </div>
             <Link
-              href="/text-interview"
+              href="/text-interview/setup"
               className="btn-success text-white px-6 py-3 rounded-xl font-bold shadow-lg hover:shadow-xl transform transition-all duration-300 inline-flex items-center group w-full justify-center"
             >
               <Zap className="mr-2 h-5 w-5 group-hover:animate-pulse" />

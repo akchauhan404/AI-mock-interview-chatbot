@@ -3,50 +3,65 @@ import { prisma } from '@/lib/prisma'
 import { getTokenFromRequest, verifyToken } from '@/lib/auth'
 
 // Mock AI evaluation function (replace with OpenAI API call)
+import OpenAI from "openai"
+
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY
+})
+
+// Real AI-based evaluation function
 async function evaluateAnswer(question: string, answer: string): Promise<{ score: number; feedback: string }> {
-  // This would typically call OpenAI API
-  // For now, return mock evaluation based on answer length and keywords
-  
-  const answerLength = answer.trim().length
-  const hasSpecificExamples = /example|instance|time when|situation|experience/i.test(answer)
-  const hasQuantifiableResults = /\d+%|\$\d+|increased|decreased|improved|reduced/i.test(answer)
-  
-  let score = 5 // Base score
-  let feedback = "Thank you for your response. "
-  
-  if (answerLength < 50) {
-    score = 3
-    feedback += "Your answer could benefit from more detail and specific examples. "
-  } else if (answerLength > 200) {
-    score += 2
-    feedback += "Good level of detail in your response. "
+  try {
+    const prompt = `
+You are an expert AI interviewer evaluating a candidate's response to a technical question.
+
+Question:
+${question}
+
+Candidate's Answer:
+${answer}
+
+Please analyze the response and provide:
+1. A total score from 0–10 (based on correctness, clarity, technical depth, and communication)
+2. A 3–5 sentence constructive feedback explaining strengths and improvements.
+Return output in strict JSON format:
+{
+  "score": <number>,
+  "feedback": "<text>"
+}
+`
+
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [
+        { role: "system", content: "You are an expert technical interviewer and evaluator." },
+        { role: "user", content: prompt }
+      ],
+      temperature: 0.4
+    })
+
+    const text = completion.choices[0].message?.content?.trim() || ""
+    const jsonMatch = text.match(/\{[\s\S]*\}/)
+
+    if (!jsonMatch) {
+      console.warn("AI did not return valid JSON, fallback triggered:", text)
+      return { score: 6, feedback: "AI could not evaluate properly. Please try again." }
+    }
+
+    const parsed = JSON.parse(jsonMatch[0])
+    return {
+      score: parsed.score || 6,
+      feedback: parsed.feedback || "Good response with room for improvement."
+    }
+
+  } catch (error) {
+    console.error("OpenAI evaluation error:", error)
+    // fallback
+    return {
+      score: 5,
+      feedback: "Temporary issue with AI evaluation. Default feedback applied."
+    }
   }
-  
-  if (hasSpecificExamples) {
-    score += 2
-    feedback += "Great use of specific examples to illustrate your points. "
-  } else {
-    feedback += "Consider adding specific examples to strengthen your answer. "
-  }
-  
-  if (hasQuantifiableResults) {
-    score += 1
-    feedback += "Excellent use of quantifiable results to demonstrate impact. "
-  }
-  
-  // Cap score at 10
-  score = Math.min(10, score)
-  
-  // Add constructive feedback based on score
-  if (score >= 8) {
-    feedback += "This is a strong response that demonstrates good self-awareness and communication skills."
-  } else if (score >= 6) {
-    feedback += "This is a solid response with room for improvement in providing more specific details."
-  } else {
-    feedback += "Consider expanding your answer with more specific examples and details about your experience."
-  }
-  
-  return { score, feedback }
 }
 
 export async function POST(request: NextRequest) {
